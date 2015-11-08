@@ -1,0 +1,102 @@
+---
+title: "Assignment 2"
+author: "Group 4"
+date: "9. nov. 2015"
+output: html_document
+---
+
+
+*Chris, Sune, Jeppe and Nina*  
+**DET VIL VÆRE FEDT HVIS VI KAN GEMME KODEN, F.EKS. MED ECHO=FALSE - MEN DER SKAL NOGET MERE TIL, HVAD?**
+
+```{r, echo=FALSE}
+library(rvest)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+df=read.csv("C:/Users/Nina/Documents/SDS R/Assignment 2/bribes.csv")
+df$week_day = wday(df$date, label = TRUE, abbr = FALSE)
+```
+**Introduction to data**  
+The dataset analyzed in this assignment contains 1000 observations on self-reported bribes in India from 12th to 30th of October 2015. Data are scraped from the webpage *Ipaidabribe*. **(EVT INDS?T LINK)**. It contains information about when and where in the system the bribe took place, the geographical location and to what kind of transaction the bribe is related.  
+
+**NOTE: WHEN WE SAY BRIBES, WE MEAN reported BRIBES!**
+
+Data shows clearly that in the observed period some provinces experience more corruption than others. Karnataka is without comparison the city with most bribes reported. This cannot be explained by the size of the population, as Karnataka is only the ninth largest state in terms of population. For instance Uttar Pradesh and Maharashtra have more than three times larger populations than Karnataka (https://en.wikipedia.org/wiki/States_and_union_territories_of_India). **(OBS TJEK LINK - KAN VI LAVE "RIGTIGE" REFERENCER?)**  
+*Figure 1: Number of bribes paid in each province* 
+**KAN VI S?TTE OVERSKRIFT DIREKTE P? FIGUREN?**  
+
+```{r}
+ggplot(data = df, aes(x = province)) + geom_histogram() + coord_flip()
+```
+For Karnataka we see that most of the bribes paid concern official documents like "Duplicating Registration Certificate" and "Issue of Ration Card". These bribes associated with official papers are a general issue in India and we will look at that later. The reasons why it still is a big problem in Karnataka and why this province is the most corrupted in terms of bribes paid is ambiguous. However, in India - and particularly Karnataka - the government is working on limiting the corruption (https://en.wikipedia.org/wiki/Corruption_in_India).**(TJEK LINK)** 
+
+*Figure 2: Transactions in Karnataka*  
+
+```{r}
+ggplot(data = df, aes(x = transaction)) + geom_histogram() + coord_flip()
+```
+
+A further exploration of data reveals another interesting feature, namely that more than one third of the bribes are reported on Mondays. **(TJEK: HVOR MANGE MANDAGE ER DER I PERIODEN?)**  
+The reason for this is not clear. There are many possible explanations **(and a specific study of this would be preferable, though we have not had the luck finding such a study)**. Among the possible explanations are the simpel one, that the people of India find Monday to be a good day for making official papers. Another reason could be, that the officials spent all their pay in the weekend, and now need a little extra. A third cause of the phenomena could be the reporting - when one submits a report on a bribe, it is not clear whether they ask for the date of the bribe took or the current date, i.e. the reportation date. Maybe it is accepted to chill at the office on Mondays, which would free time for "private office-work", like reporting a bribe - who knows?  
+
+*Figure 3: Number of bribes per day in the week*
+```{r}
+ggplot(data = df, aes(x = week_day)) + geom_histogram()
+```
+
+
+**Corruption in Official Papers and Vital Necessities**  
+As already mentioned when it comes to the amount of bribes by department, it is clear that the 'Municipal Services' and 'Food, Civil Supplies and Consumer Affairs' departments are overrepresented. Almost all the reported bribes concern birth certificates and ration cards, which could indicate a tendency to a higher degree of corruption in official papers and vital necessities.       
+
+*Figure 4: Number of bribes in each department*
+```{r}
+ggplot(data = df, aes(x = department)) + geom_histogram() + coord_flip()
+```
+
+*Figure 5: Number of bribes in different transactions*
+```{r}
+ggplot(data = df, aes(x = transaction)) + geom_histogram() + coord_flip()
+```
+
+*Ration cards*  
+In public, a high degree of corruption within ration cards in India is well known. This applies both to the families who apply for the card, but shops, which cooperates with India's public distribution system also exploit the possibility to get fake ration cards by bribing officials. In this way the shops get a bigger ratio and they sell the extra goods at the black market. This could lead to a reasonable profit, and you could thereby assume that the bribes would be reasonable big, but from the figure below it is clear that the mean of the bribes (INR 2.220) in this area are small compared to other areas. But at the same time a few bribes are considerably larger, which could reflect that the small bribes represent poor families applying for a ration card and the big bribes represent shop owners or people who exploit the ration cards on a bigger scale.  **(wHAT ABOUT OUTLIERS??)**    
+  
+*Figure 6: Mean of bribes amount by transaction*  
+```{r}
+#LAV DATASÆT MED MEANBRIBES (Y-AKSEN ER MEANBRIBES)
+#ggplot(data = df, aes(x = transaction, y=amount)) + geom_histogram() 
+```
+
+Almost all the bribes concerning issue of ration cards are made at Mondays, which as mentioned seems to be a general tendency for all transactions. But in this case it could be a possibility that the issuing ration card offices only have opening hours Mondays, because only 5 bribes were reported other days (n=159).  
+
+
+*Birth Certificates*   
+
+The largest area of reported bribes is issuing of birth certificates. As seen in the figure below the province Karnataka is overrepresented, which is in good compliance with the general level of corruption by province in India where Karnataka is overrepresented despite the number of inhabitants.  
+
+*Figure 7: Number of bribes in each province*
+```{r}
+ggplot(data = df, aes(x = province)) + geom_histogram() + coord_flip()
+```
+
+Once again most bribes are reported on Mondays as seen in the figure below. But in this area bribes are also reported other weekdays. We plotted the mean amount of the bribe by weekday to look for a possible relationship and it turns out that the size of the bribes actually are small on Mondays compared to the weekend and Wednesday. An explanation could be that the bribes are dependent on the timeframe to receive the certificate. If you apply for a birth certificate in the weekends you might be in a hurry to get the certificate, and therefore more willing to pay a higher bribe.    
+  
+*Figure 8: Number of bribes by weekday*  
+```{r}
+ggplot(data = df, aes(x = week_day)) + geom_histogram()
+```
+
+*Figure 9: Mean amount bribes by weekday*  
+```{r}
+#LAV DATASÆT MED MEANBRIBES (Y-AKSEN ER MEANBRIBES)
+#ggplot(data = df, aes(x = week_day, y=amount)) + geom_histogram()
+```
+
+
+**Conclusions**  
+**Appendix**  
+*R-code for creating dataset*  
+INSERT CODE FOR SCRAPING *Ipaidabribe*  
+
