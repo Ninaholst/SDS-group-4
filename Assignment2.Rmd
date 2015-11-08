@@ -5,12 +5,6 @@ date: "Nov 9 2015"
 output: html_document
 ---
 
-<!-- KOMMENTAR
-Kan vi lave "rigtige" referencer?
-Hvor mange mandage er der i perioden?
-In the section on ration cards: What about outliers?
--->
-
 *Chris, Sune, Jeppe and Nina*
 
 ```{r, echo=FALSE, message=FALSE}
@@ -24,18 +18,19 @@ library(readr)
 library(scales)
 
 # Load dataset
-df = read_csv("https://raw.githubusercontent.com/Ninaholst/SDS-group-4/master/bribes.csv")
+df = read_csv("https://raw.githubusercontent.com/Ninaholst/SDS-group-4/master/bribes_081115.csv")
 df$week_day = wday(df$date, label = TRUE, abbr = FALSE)
-df = filter(df, amount < 10000000) # remove insane outliers
+df = filter(df, amount < 10000000) # remove silly outlier
+df = filter(df, city != "")
 ```
 
 # Introduction to data
 
-The dataset analyzed in this assignment contains 1000 observations on self-reported bribes in India from 12th to 30th of October 2015. The data was scraped from the webpage http://www.ipaidabribe.com/. It contains information about when and where in the system the bribe took place, the geographical location and what kind of transaction the bribe was related to.
+The dataset analyzed in this assignment contains 1000 observations on self-reported bribes in India from October 12 to November 8 2015. The data was scraped from the webpage http://www.ipaidabribe.com/. It contains information about when and where in the system the bribe took place, the geographical location and what kind of transaction the bribe was related to.
 
-Monday the 12th of October 2015 is overrepresented in the dataset, 734 of the 1000 bribes were reported this Monday. When you look at different variables grouped by weekday, this causes the false impression that bribes relate to Mondays, but it is only caused by the large amount of reported bribes on this specific day.
+Monday the 12th of October 2015 is overrepresented in the dataset, 510 of the 1000 bribes were reported this Monday. When you look at different variables grouped by weekday, this causes the false impression that bribes relate to Mondays, but it is only caused by the large amount of reported bribes on this specific day.
 
-We leave out one observation in the dataset of a 2500000000 INR bribe which seems to be a misreporting. In general, the bribes categorised in *Others* seem to be less reliable and should be treated with caution.
+We leave out 6 observations in the dataset where the bribes reported amount to more than 10 million INR which seems to be a misreporting. We also leave out 2 observations where only the bribe amount was reported and no information about transaction type and location was included. In general, the bribes categorised in *Others* seem to be less reliable and should be treated with caution.
 
 In the following, we will simply denote the reported bribes as *bribes*.
 
@@ -56,8 +51,19 @@ For Karnataka, we see that most of the bribes paid concern official documents li
 *Figure 2: Transactions in Karnataka*  
 
 ```{r, echo=FALSE}
-ggplot(data = filter(df, province == "Karnataka"), aes(x = transaction)) + geom_histogram() + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
+df.karnataka.transaction = df %>%
+   filter(province == "Karnataka") %>%
+   group_by(transaction) %>%
+   summarise(
+      n = n()
+   ) %>%
+   arrange(-n) %>%
+   head(15)
+
+ggplot(data = df.karnataka.transaction, aes(x = transaction, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
 ```
+
+*NB: Only the 15 most common transaction types are listed.*
 
 
 # Corruption in Official Papers and Vital Necessities
@@ -67,14 +73,36 @@ When it comes to the amount of bribes by department, it is clear that the "Munic
 *Figure 3: Number of bribes in each department*
 
 ```{r, echo=FALSE}
-ggplot(data = df, aes(x = department)) + geom_histogram() + coord_flip() + theme_minimal() + labs(x = "Department", y = "Number of bribes")
+df.department = df %>%
+   group_by(department) %>%
+   summarise(
+      n = n()
+   ) %>%
+   arrange(-n) %>%
+   head(10)
+
+ggplot(data = df.department, aes(x = department, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Department", y = "Number of bribes")
 ```
+
+*NB: Only the 10 largest departments are listed.*
+
 
 *Figure 4: Number of bribes in different transactions*
 
 ```{r, echo=FALSE}
-ggplot(data = df, aes(x = transaction)) + geom_histogram() + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
+df.transaction = df %>%
+   group_by(transaction) %>%
+   summarise(
+      n = n()
+   ) %>%
+   arrange(-n) %>%
+   head(15)
+
+ggplot(data = df.transaction, aes(x = transaction, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
 ```
+
+*NB: Only the 15 most common transaction types are listed.*
+
 
 ## Ration cards
 
@@ -88,11 +116,16 @@ In public, a high degree of corruption within ration cards in India is well know
 df.bribes.by.transaction = df %>%
    group_by(transaction) %>%
    summarise(
-      mean = mean(amount)
-   )
+      mean = mean(amount),
+      n = n()
+   ) %>%
+   arrange(-n) %>%
+   head(15)
 
 ggplot(data = df.bribes.by.transaction, aes(x = transaction, y = mean)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Mean bribe amount") + scale_y_continuous(labels = comma)
 ```
+
+*NB: Only the 15 most common transaction types are listed.*
 
 
 ## Birth Certificates
@@ -120,7 +153,7 @@ df.bribes.by.province = df %>%
       mean = mean(amount)
    )
 
-ggplot(data = df.bribes.by.province, aes(x = province, y = mean)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal()
+ggplot(data = df.bribes.by.province, aes(x = province, y = mean)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Province", y = "Mean bribe amount") + scale_y_continuous(labels = comma)
 ```
 
 
@@ -163,11 +196,9 @@ scrape.bribes = function(dt, url) {
 
    views = bribes %>% html_nodes(".views") %>% html_text() %>% str_extract("\\d+") %>% as.numeric()
 
-   location = bribes %>% html_nodes(".location") %>% html_text() %>% str_extract_all("\\w+", simplify = TRUE)
-   city = location[,1]
-   province = ifelse(ncol(location) > 2,
-                     apply(location[, 2:ncol(location)], 1, function(x) str_trim(paste(x, collapse = ' '))),
-                     str_trim(location[, 2]));
+   location = bribes %>% html_nodes(".location") %>% html_text()
+   city = location %>% str_extract("[\\w\\s]+") %>% str_trim()
+   province = location %>% str_extract(",\\s*[\\w\\s]+") %>% str_extract("[\\w\\s]+") %>% str_trim()
 
    Sys.setlocale("LC_TIME", "C") # fix to prevent NA from date
    date = bribes %>% html_nodes(".key > .date") %>% html_text() %>% as.Date("%B %d, %Y")
@@ -204,6 +235,6 @@ dt = filter(dt, !duplicated(dt))
 # Save data to disk ----
 #
 
-write.csv(dt, file = "D:/NewDrive/Backup/Polit/Social Data Science/bribes_061115.csv", row.names = FALSE)
+write.csv(dt, file = "~/bribes.csv", row.names = FALSE)
 ```
 
