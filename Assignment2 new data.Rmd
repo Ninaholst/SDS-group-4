@@ -1,5 +1,5 @@
 ---
-title: "Assignment 2"
+title: "Assignment 2 new data"
 author: "Group 4"
 date: "9. nov. 2015"
 output: html_document
@@ -8,23 +8,27 @@ output: html_document
 
 
 *Chris, Sune, Jeppe and Nina*  
+**DET VIL VÆRE FEDT HVIS VI KAN GEMME KODEN, F.EKS. MED ECHO=FALSE - MEN DER SKAL NOGET MERE TIL, HVAD? NÅR JEG TILFØJER (ELLER ERSTATTER MED) EVAL=FALSE VIL DEN IKKE KØRE**
 
 ```{r, echo=FALSE}
 #, echo=FALSE, eval=FALSE
+#Kode og tekst er baseret på det gamle datasæt. Hvis vi vil benytte det nye i stedet, skal vi rette til. 
+
 #DET VIL VÆRE FEDT HVIS VI KAN GEMME KODEN, F.EKS. MED ECHO=FALSE - MEN DER SKAL NOGET MERE TIL, HVAD? NÅR JEG TILFØJER (ELLER ERSTATTER MED) EVAL=FALSE VIL DEN IKKE KØRE
 #Kan vi lave "rigtige" referencer?
 #Hvor mange mandage er der i perioden?
 #In the section on ration cards: What about outliers?
+
 library(rvest)
 library(stringr)
 library(lubridate)
 library(ggplot2)
 library(dplyr)
-
 library(readr)
-df=read_csv("https://raw.githubusercontent.com/Ninaholst/SDS-group-4/master/bribes.csv")
+df=read_csv("https://raw.githubusercontent.com/Ninaholst/SDS-group-4/master/bribes_061115.csv")
 df$week_day = wday(df$date, label = TRUE, abbr = FALSE)
 ```
+
 **Introduction to data**  
 The dataset analyzed in this assignment contains 1000 observations on self-reported bribes in India from 12th to 30th of October 2015. Data are scraped from the webpage *http://www.ipaidabribe.com/*.   
 It contains information about when and where in the system the bribe took place, the geographical location and to what kind of transaction the bribe is related.  
@@ -104,4 +108,3 @@ ggplot(data = df, aes(x = week_day)) + geom_histogram()
 **Appendix**  
 *R-code for creating dataset*  
 INSERT CODE FOR SCRAPING *Ipaidabribe*  
-
