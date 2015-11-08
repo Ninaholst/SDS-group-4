@@ -117,8 +117,18 @@ ggplot(data = df, aes(x = week_day)) + geom_histogram()
 *Figure 9: Mean amount bribes by weekday* 
 
 ```{r, echo=FALSE}
-#LAV DATASÆT MED MEANBRIBES (Y-AKSEN ER MEANBRIBES)
-#ggplot(data = df, aes(x = week_day, y=amount)) + geom_histogram()
+df.bribes.per.wday = df %>%
+   group_by(date) %>%
+   summarise(
+      n = n()
+   ) %>%
+   mutate(week_day = wday(date, label = TRUE, abbr = FALSE)) %>%
+   group_by(week_day) %>%
+   summarise(
+      mean = mean(n)
+   )
+
+ggplot(data = df.bribes.per.wday, aes(x = week_day, y = mean)) + geom_bar(stat = "identity")
 ```
 
 
