@@ -140,7 +140,11 @@ ggplot(data = filter(df, transaction == "Birth Certificate"), aes(x = province))
 ```
 
 
-The figure below shows the mean amount of the bribes by province to look for a relationship between those. It could be reasonable to expect larger bribes in the most corrupt cities. This assumption relies on the thought that when corruption has become more general it could mean the amounts raise. But it actually turns out that the provinces which are reported the most corrupt[^most-corrupt] have lower average bribes.
+In the map below the mean bribe paid in a given state is shown. On the map we see that XXX is the province with the highest mean bribes paid and XXX has the lowest mean bribe.
+
+Indsæt Map (http://stackoverflow.com/questions/30706542/how-to-map-an-indian-state-with-districts-in-r) 
+
+This could give us the idea that XXX is one of the most corrupt provinces as this is the province where the mean bribe is highest. But this is actually not the case. In fact this province is the least corrupt province according to a list by topyads.com [^most-corrupt] containing the most corrupt provinces in India. In the table below it is shown that actually the mean bribe and rate of corruption is in inverse ratio. That is, the province with the lowest mean bribe, YYY, is the most corrupt province according to the list.
 
 [^most-corrupt]: http://topyaps.com/10-corrupt-cities-india
 
@@ -157,7 +161,11 @@ ggplot(data = df.bribes.by.province, aes(x = province, y = mean)) + geom_bar(sta
 ```
 
 
-# Conclusions
+# Closing remark  
+
+We can discuss whether this data from the website is representative for the corruption in India. First problem to consider is that the bribes are self-reported. For instance, we saw bribes like “12.345”, which are an odd number to pay in a bribe and might be a imaginary amount made for fun. Furthermore, we saw some unrealistic high amounts that might be imaginary as well and not due to an actual bribe. 
+Another concern is that there might be a selection bias as only people with access to the Internet are able to report bribes paid. Furthermore, you need knowledge about the website to report any bribes. This might cause that people from the outer provinces or countryside are not among people in the data as the might not have access to the Internet.
+
 
 
 # Appendix
