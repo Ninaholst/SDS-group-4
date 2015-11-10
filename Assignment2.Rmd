@@ -5,7 +5,9 @@ date: "Nov 9 2015"
 output: html_document
 ---
 
+
 *Chris, Sune, Jeppe and Nina*
+
 
 ```{r, echo=FALSE, message=FALSE}
 # Read libraries
@@ -16,6 +18,8 @@ library(ggplot2)
 library(dplyr)
 library(readr)
 library(scales)
+library(raster)
+library(viridis)
 
 # Load dataset
 df = read_csv("https://raw.githubusercontent.com/Ninaholst/SDS-group-4/master/bribes_081115.csv")
@@ -24,92 +28,124 @@ df = filter(df, amount < 10000000) # remove silly outlier
 df = filter(df, city != "")
 ```
 
+
 # Introduction to data
 
 The dataset analyzed in this assignment contains 1000 observations on self-reported bribes in India from October 12 to November 8 2015. The data was scraped from the webpage http://www.ipaidabribe.com/. It contains information about when and where in the system the bribe took place, the geographical location and what kind of transaction the bribe was related to.
 
-Monday the 12th of October 2015 is overrepresented in the dataset, 510 of the 1000 bribes were reported this Monday. When you look at different variables grouped by weekday, this causes the false impression that bribes relate to Mondays, but it is only caused by the large amount of reported bribes on this specific day.
+Monday the 12th of October 2015 is overrepresented in the dataset, 510 of the 1000 bribes were reported this Monday. When you look at the data grouped by weekday, this gives a false impression of bribes being more frequent on Mondays, but it is only caused by the large amount of reported bribes on this specific date. Whether there is in fact a relation between the day of the week and bribes reported would therefore require a much larger dataset which is outside the scope of this assignment.
 
-We leave out 6 observations in the dataset where the bribes reported amount to more than 10 million INR which seems to be a misreporting. We also leave out 2 observations where only the bribe amount was reported and no information about transaction type and location was included. In general, the bribes categorised in *Others* seem to be less reliable and should be treated with caution.
+Before starting with the analysis, we clean the dataset by removing outlier observations that might otherwise distort our findings. We leave out 6 observations where the bribes reported amount to more than 10 million INR which seems to be a misreporting. We also leave out 2 observations where only the bribe amount was reported and no information about transaction type and location was included. In general, the bribes categorised in *Others* seem to be less reliable and should be treated with caution.
 
-In the following, we will simply denote the reported bribes as *bribes*.
+In the following analysis, we will simply denote the reported bribes as *bribes*.
 
-The data clearly shows that in the observed period some provinces experience more corruption than others. Karnataka is without comparison the city with most the bribes reported. This cannot be explained by the size of its population as Karnataka is only the ninth largest state in terms of population. For instance, Uttar Pradesh and Maharashtra have more than three times the population of Karnataka[^states-india].
+
+# Analysis
+
+The data clearly shows that in the observed period some provinces experience more corruption than others. Karnataka is without comparison the province with most the bribes reported. This cannot be explained by the size of its population as Karnataka is only the ninth largest province in terms of population in India. For instance, Uttar Pradesh and Maharashtra have more than three times the population of Karnataka[^states-india].
 
 [^states-india]: https://en.wikipedia.org/wiki/States_and_union_territories_of_India
 
 *Figure 1: Number of bribes paid in each province*
 
-```{r, echo=FALSE}
-ggplot(data = df, aes(x = province)) + geom_histogram() + coord_flip() + theme_minimal() + labs(x = "Province", y = "Number of bribes")
+```{r, echo=FALSE, warning=FALSE}
+dt.province.population = read_html("https://en.wikipedia.org/wiki/States_and_union_territories_of_India") %>% html_node(".wikitable") %>% html_table()
+dt.province.population$Population = as.numeric(gsub(",", "", str_extract(dt.province.population$Population, "\\d+(,\\d+)*")))
+dt.province.population$province = dt.province.population$Name
+
+df.bribes.by.province = df %>%
+   group_by(province) %>%
+   summarise(
+      mean = mean(amount),
+      n = n()
+   )
+
+ggplot(data = df.bribes.by.province, aes(x = province, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Province", y = "Number of bribes")
 ```
 
-For Karnataka, we see that most of the bribes paid concern official documents like "Duplicating Registration Certificate" and "Issue of Ration Card". These bribes associated with official papers are a general issue in India and we will take a closer look at that later. The reason why it is a big problem in Karnataka and why this province is the most corrupted in terms of bribes paid is ambiguous. However, in India - and particularly Karnataka - the government is working on limiting the corruption[^corruption-india].
+In the following, we therefore take a closer look at how the corruption in Karnataka takes place. Which parts of the system are being affected by corruption and to how much does it amount?
 
+For Karnataka, we see that most of the bribes paid concern official documents such as certificates. We also note the issuing of ration cards make up a significant part, and due to the controversy surrounding this transaction type we will discuss the issue further. Focusing our attention on the mean bribe amount paid, registration of property is, nonsurprisingly, the highest. The filing of a First Information Report[^first-information-report] is also high which validates the general perception of widespread police corruption in India (note police harassment and police verification of passport also being significant transaction types).
+
+The reason why the province of Karnataka is the most corrupted in terms of the number of bribes is unclear, however. It's possible that there simply is more corruption, but other plausible explanations could be that the webpage from which the dataset was scraped is more known to and used by citizens of Karnataka. The province was, however, the target of a major mining corruption scandal recently[^corruption-india], which could validate the theory of the province simply being corrupt. We must note that 300 of the 349 bribes reported in Karnataka was on October 12, the date at which half of the bribes were reported. 
+
+[^first-information-report]: https://en.wikipedia.org/wiki/First_Information_Report
 [^corruption-india]: https://en.wikipedia.org/wiki/Corruption_in_India
 
-*Figure 2: Transactions in Karnataka*  
+*Figure 2: Transaction types in Karnataka*  
 
 ```{r, echo=FALSE}
 df.karnataka.transaction = df %>%
    filter(province == "Karnataka") %>%
    group_by(transaction) %>%
    summarise(
+      mean = mean(amount),
       n = n()
    ) %>%
    arrange(-n) %>%
    head(15)
 
-ggplot(data = df.karnataka.transaction, aes(x = transaction, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
+ggplot(data = df.karnataka.transaction, aes(x = transaction, y = n)) + geom_bar(stat = "identity", aes(fill = mean)) + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes") + scale_fill_continuous(name = "Mean bribe amount") + theme(legend.position = "bottom")
 ```
 
 *NB: Only the 15 most common transaction types are listed.*
 
 
-# Corruption in Official Papers and Vital Necessities
+## Corruption in Official Papers and Vital Necessities
 
-When it comes to the amount of bribes by department, it is clear that the "Municipal Services" and "Food, Civil Supplies and Consumer Affairs" departments are overrepresented. Almost all the reported bribes concern birth certificates and ration cards, which could indicate a tendency to a higher degree of corruption in official papers and vital necessities.
+We remain focused on Karnataka for a little longer and now look at the bribes by department, the sector of the economy in which they were paid. Transport, police, and stamps and registration are the largest departments in Karnataka which is in contrast to the entirety of India in which municipal services account for the most bribes followed by food, civil supplies and consumer affairs and only then police. This finding could possibly explain why Karnataka is the most corrupt province. If the daily interactions with police and transport require bribes, then the frequency at which citizens face corruption will be much higher than a province where the most corruption is in the municipality.
 
-*Figure 3: Number of bribes in each department*
+*Figure 3: Bribes by department in Karnataka*
 
 ```{r, echo=FALSE}
-df.department = df %>%
+df.karnataka.department = df %>%
+   filter(province == "Karnataka") %>%
    group_by(department) %>%
    summarise(
+      mean = mean(amount),
       n = n()
    ) %>%
    arrange(-n) %>%
    head(10)
 
-ggplot(data = df.department, aes(x = department, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Department", y = "Number of bribes")
+ggplot(data = df.karnataka.department, aes(x = department, y = n)) + geom_bar(stat = "identity", aes(fill = mean)) + coord_flip() + theme_minimal() + labs(x = "Department", y = "Number of bribes") + scale_fill_continuous(name = "Mean bribe amount") + theme(legend.position = "bottom")
 ```
 
 *NB: Only the 10 largest departments are listed.*
 
+Widening our attention to all of India we note that stamps and registration, which encompasses marriage certificates, registration of property, etc., has a very high mean bribe amount. This is primarily due to a single registration of property amounting to 8 million INR in Mumbai. Whether this is a misreporting or not is hard to determine as we don't know anything about who paid the bribe. If the bribe was paid by a large corporation in order to secure an important piece of land, then the amount paid is not unreasonable.
 
-*Figure 4: Number of bribes in different transactions*
+Amusingly, income tax is also a significant department in which bribes are reported. These bribes may not actually be bribes, but could simply be that some people find the act of paying taxes similar to that of corruption as you may not actually know if the money is going towards the system or are being pocketed by the cashier. The same explanation can be applied to the departments concerning other taxes and VAT.
+
+*Table 1: Bribes by department in all of India*
 
 ```{r, echo=FALSE}
-df.transaction = df %>%
-   group_by(transaction) %>%
+df.department = df %>%
+   group_by(department) %>%
    summarise(
+      mean = mean(amount),
       n = n()
    ) %>%
    arrange(-n) %>%
-   head(15)
+   head(10)
 
-ggplot(data = df.transaction, aes(x = transaction, y = n)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Transaction type", y = "Number of bribes")
+knitr::kable(df.department, format.args = list(big.mark = ","), digits = 0, col.names = c("Department", "Mean bribe amount", "Observations"))
 ```
-
-*NB: Only the 15 most common transaction types are listed.*
 
 
 ## Ration cards
 
+As corruption concerning the issuing of ration cards is a controversial topic, we will discuss it briefly. It is a well known issue in India that there is corruption in this area and many steps are being taken to fight it. One of the issues is that fake ration cards are issued allowing those who aren't actually eligible for them to get cheaper food and fuel. But not only fake ration cards are an issue, as persons who are eligible for one may not get it due to facing a large bribe. As ration cards are aimed at the poor, they face a hard time paying these bribes, but it would explain the relatively low mean bribe amount (`r mean(filter(df, transaction == "Issue of Ration Card")$amount)` INR) and the even lower median bribe amount (`r median(filter(df, transaction == "Issue of Ration Card")$amount)` INR). It's a large concern that the poor are being exploited in such a way as they risk starvation if faced with unreasonable bribe demands.
+
+On the other end of the spectrum, the shop owners accepting ration cards may also charge bribes in order for the poor to simply use it. And they can exploit fake ration cards to withdraw subsidies followed by selling the goods on the black market. These obvious issues are a clear indicator of the new for reform in these systems in order for India to combat the widespread corruption.[^ration-card]
+
+<!-- UDG≈ET
 In public, a high degree of corruption within ration cards in India is well known. This applies both to the families who apply for the card, but shops, which cooperates with India's public distribution system also exploit the possibility to get fake ration cards by bribing officials. In this way the shops get a bigger ratio and they sell the extra goods at the black market. This could lead to a reasonable profit, and you could thereby assume that the bribes would be reasonable big, but from the figure below it is clear that the mean of the bribes (INR 2.220) in this area are small compared to other areas. But at the same time a few bribes are considerably larger, which could reflect that the small bribes represent poor families applying for a ration card and the big bribes represent shop owners or people who exploit the ration cards on a bigger scale.[^ration-card]
+-->
 
 [^ration-card]: https://en.wikipedia.org/wiki/Ration_card_(India)
-  
+
+<!-- UDG≈ET
 *Figure 5: Mean of bribes amount by transaction*
 
 ```{r, echo=FALSE}
@@ -126,49 +162,76 @@ ggplot(data = df.bribes.by.transaction, aes(x = transaction, y = mean)) + geom_b
 ```
 
 *NB: Only the 15 most common transaction types are listed.*
+-->
 
 
 ## Birth Certificates
 
-The largest area of reported bribes is issuing of birth certificates. As seen in the figure below the province Karnataka is overrepresented despite the number of inhabitants, which is in good compliance with the general level of corruption by province in India where the state as already mentioned tries to limit the corruption because it is a known problem. Also the city Bangalore which is the capital of Karnataka is rated as the most corrupt city in India.
+The transaction type with the most reported bribes is the issuing of birth certificates. The table below suggests that this is a more general issue of corruption in India than simply being possible to attribute to one province such as Karnataka. The mean bribe amount varies a lot between the provinces with no clear pattern. Uttar Pradesh actually has more than twice as many reports as Karnataka concerning birth certificates. The fact that birth certificates account for such a large number of the bribes is a great indication of necessary official documents being a prime target for corruption. 
 
-
-*Figure 6: Number of Birth Certificate bribes in each province*
-
-```{r, echo=FALSE}
-ggplot(data = filter(df, transaction == "Birth Certificate"), aes(x = province)) + geom_histogram() + coord_flip() + theme_minimal() + labs(x = "Province", y = "Number of bribes")
-```
-
-
-In the map below the mean bribe paid in a given state is shown. On the map we see that XXX is the province with the highest mean bribes paid and XXX has the lowest mean bribe.
-
-Inds√¶t Map (http://stackoverflow.com/questions/30706542/how-to-map-an-indian-state-with-districts-in-r) 
-
-This could give us the idea that XXX is one of the most corrupt provinces as this is the province where the mean bribe is highest. But this is actually not the case. In fact this province is the least corrupt province according to a list by topyads.com [^most-corrupt] containing the most corrupt provinces in India. In the table below it is shown that actually the mean bribe and rate of corruption is in inverse ratio. That is, the province with the lowest mean bribe, YYY, is the most corrupt province according to the list.
-
-[^most-corrupt]: http://topyaps.com/10-corrupt-cities-india
-
-*Figure 7: Mean amount of bribes by province*
+*Table 2: Birth Certificate bribe statistics by province*
 
 ```{r, echo=FALSE}
-df.bribes.by.province = df %>%
+df.birth.certificates.province = df %>%
+   filter(transaction == "Birth Certificate") %>%
    group_by(province) %>%
    summarise(
-      mean = mean(amount)
-   )
+      mean = mean(amount),
+      n = n()
+   ) %>%
+   arrange(province)
 
-ggplot(data = df.bribes.by.province, aes(x = province, y = mean)) + geom_bar(stat = "identity") + coord_flip() + theme_minimal() + labs(x = "Province", y = "Mean bribe amount") + scale_y_continuous(labels = comma)
+df.birth.certificates.province = dplyr::select(inner_join(df.birth.certificates.province, dt.province.population, by = "province"), province, mean, n, Population)
+
+knitr::kable(df.birth.certificates.province, format.args = list(big.mark = ","), digits = 0, col.names = c("Province", "Mean bribe amount", "Observations", "Population"))
 ```
+
+*NB: Only actual states are reported in the table. Administrative union territories, which are excluded, only amount to a few of the total observations. Population numbers have been scraped from https://en.wikipedia.org/wiki/States_and_union_territories_of_India and are from the 2011 census.*
+
+As was the case with ration cards, corruption in birth certificates show that goods and services that are a necessity of life in most cases, are also the ones that can most easily be exploited leading to corruption.
+
+
+## Geography and corruption
+
+In the map below the mean bribe paid in a given province is shown. On the map we see that Maharashtra is the province with the highest mean bribes paid and Pondicherry has the lowest mean bribe paid. However, the latter relies on just 1 observation and should be treated with caution. For a detailed overview of the number of bribes and the mean amount paid by province, please see the Appendix table.
+
+*Figure 4: Mean bribe amount by province*
+
+```{r, echo=FALSE}
+map.india = getData("GADM", country = "India", level = 1)
+map = fortify(map.india, region = "NAME_1")
+
+p = ggplot() + geom_map(data = map, map = map, aes(x = long, y = lat, map_id = id, group = group))
+p = p + geom_map(data = df.bribes.by.province, map = map, aes(fill = mean, group = province, map_id = province))
+p = p + scale_fill_viridis(trans = "log", breaks = c(100, 10000, 100000), labels = c("low", "medium", "high"), name = "Mean bribe by province\n(log transformed)")
+p = p + coord_equal(ratio = 1) + theme_minimal()
+p
+```
+
+Some of the most corrupt provinces by the number of bribes actually have the lowest mean bribe amounts, leading to the explanation that the provinces with widespread corruption experience a large number of smaller bribes. It is difficult to draw such a general conclusion on the small number of samples, however, as we only have more than 100 observations for 3 provinces.
+
+<!-- UDG≈ET
+This could give us the idea that Maharashtra is one of the most corrupt provinces as this is the province where the mean bribe is highest. But this is actually not the case. In fact this province is the least corrupt province according to a list by topyads.com[^most-corrupt] containing the most corrupt provinces in India. In the table below it is shown that actually the mean bribe and rate of corruption is in inverse ratio. That is, the province with the lowest mean bribe, YYY, is the most corrupt province according to the list.
+
+[^most-corrupt]: http://topyaps.com/10-corrupt-cities-india
+-->
 
 
 # Closing remark  
 
-We can discuss whether this data from the website is representative for the corruption in India. First problem to consider is that the bribes are self-reported. For instance, we saw bribes like ‚Äú12.345‚Äù, which are an odd number to pay in a bribe and might be a imaginary amount made for fun. Furthermore, we saw some unrealistic high amounts that might be imaginary as well and not due to an actual bribe. 
-Another concern is that there might be a selection bias as only people with access to the Internet are able to report bribes paid. Furthermore, you need knowledge about the website to report any bribes. This might cause that people from the outer provinces or countryside are not among people in the data as the might not have access to the Internet.
+It's debatable whether the data from the website http://ipaidabribe.com is representative of the corruption in India. Firstly, the bribes are all self-reported with no validation of entries whatsoever. Bribes of unreasonably high amounts, puzzling amounts such as 12,345, etc., might just be imaginary numbers made up for the fun of it. There is no clear strategy for cleaning the data of these supposedly false reports, as they don't all necessarily fall far from the realistic distributions of a given type of bribe. This is even more complicated without any information on the individuals who report the bribes as that could give an indication of whether the bribe is believable or not.
+
+Another concern is that there might be selection bias as only people with access to the Internet are able to report bribes. You also need to be aware of the existence of the website, so the large number of bribes reported in Karnataka, for instance, may simply be due to widespread knowledge of the website and not because corruption is more prevalent. Coincidentally, people from remote provinces or the countryside may be completely isolated from the internet not being able to report any bribes at all.
 
 
 
 # Appendix
+
+## Table of mean bribe amount by province
+
+```{r, echo=FALSE}
+knitr::kable(df.bribes.by.province, format.args = list(big.mark = ","), digits = 0, col.names = c("Province", "Mean bribe amount", "Observations"))
+```
 
 ## R-code for creating dataset
 
@@ -230,7 +293,7 @@ for (i in seq(start, max - per.page, by = per.page)) {
    dt = scrape.bribes(dt, url)
 
    print(sprintf("Scraped %d/%d bribes.", i + per.page, max))
-   #Sys.sleep(1)
+   Sys.sleep(1)
 }
 
 #
